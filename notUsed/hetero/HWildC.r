@@ -16,18 +16,18 @@ genError <- function(type, n, m, SIGMA){
 
 ####################################################
 ### Simulation Settings
-error = "N"#"Hetero" # "N" # "t3" # 
+error = "Hetero"#"Hetero" # "N" # "t3" # 
 rhos = .75#c(.75, .5, .25)#.75#c(.5,.75)#
-ns = c(100, 500,1000,5000,10000) # ns = c(300, 500) # 
+ns = c(100,500,1000)#,5000)#c(100, 500,1000,5000,10000) # ns = c(300, 500) # 
 ms = c(2,3)# 5)
-taus = .5#c(.5, .7) # taus = c(.3, .5, .7) # 
+taus = c(.5,.7)#.5#c(.5, .7) # taus = c(.3, .5, .7) # 
 nsim = 100
 sigma2 = 2^2 # 1 # .7^2 # 
 ### Coefficients for model : y = XB + error
 
 
 outTotal <- NULL
-for(ycoef in c(-1)){
+for(ycoef in c(-2,-1,-.5)){
 
 	B = rep(1,4)#c( 2, 2, 2, 2 )
 	#if( error == "N" )
@@ -179,7 +179,7 @@ for(ycoef in c(-1)){
 					cat("error is",error, " sigma2 =", sigma2, "\n\n")
 
 					if( error=="Hetero" )
-						BTrue[1] <- qnorm(tau, mean=0, sd=sqrt(SIGMA[1]))
+						BTrue[1] <- B[1] + qnorm(tau, mean=0, sd=sqrt(SIGMA[1]))
 
 					settings <- c(tau=tau, m=m, rho=rho, n=n,ycoef=ycoef)
 
@@ -203,7 +203,7 @@ for(ycoef in c(-1)){
 					rm(ghat)
 					rm(gmse)
 
-					bootN <- mapply(function(xx) boot.rq( XZbso, xx, tau=tau, R=1000,bsmethod="xy" )$B[,1:length(B)], Yo, SIMPLIFY=FALSE)
+					bootN <- mapply(function(xx) boot.rq( XZbso, xx, tau=tau, R=1000,bsmethod="wild" )$B[,1:length(B)], Yo, SIMPLIFY=FALSE)
 					CI <- lapply(bootN, function(xx) apply(xx, 2, quantile, probs=c(0.05, 0.95)) )
 					width <- sapply(CI, function(xx) apply(xx, 2, diff) )
 					coverage <- sapply(CI, function(xx) 1*(xx[1,]<=BTrue & BTrue<=xx[2,]) )
@@ -305,7 +305,7 @@ for(ycoef in c(-1)){
 
 		saveRDS( list(n=n, ms=ms, rhos=rhos, taus=taus, BTrue=BTrue, error=error, 
 						sigma2=sigma2, results=out, Dropout=Dropout), 
-						file=paste("goodNormalxyBig_n",n,"_2022.RDS", sep="") )
+						file=paste("HeteroWild_n_",n,"_ycoef_",ycoef,"_2022.RDS", sep="") )
 
 		cat("Finished simulations for all n =", n, "\n\n")
 
@@ -313,7 +313,7 @@ for(ycoef in c(-1)){
 	outTotal <- rbind(outTotal, out)
 }
 
-saveRDS(outTotal, "goodNormalxyBig.RDS")
+saveRDS(outTotal, "goodHeteroxyBig.RDS")
 #out1 <- readRDS("Nn500var4bInter-2_2022.RDS")$results
 #out2 <- readRDS("Nn500var4bInter2_2022.RDS")$results
 #out3 <- readRDS("Nn500var4bInter0.1_2022.RDS")$results

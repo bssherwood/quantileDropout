@@ -16,18 +16,18 @@ genError <- function(type, n, m, SIGMA){
 
 ####################################################
 ### Simulation Settings
-error = "asymetric"#"Hetero" # "N" # "t3" # 
+error = "N"#"Hetero" # "N" # "t3" # 
 rhos = .75#c(.75, .5, .25)#.75#c(.5,.75)#
-ns = c(1000,5000,10000)#c(100, 500,1000,5000,10000) # ns = c(300, 500) # 
+ns = c(100,500,1000)#,5000)#c(100, 500,1000,5000,10000) # ns = c(300, 500) # 
 ms = c(2,3)# 5)
-taus = .5#c(.5, .7) # taus = c(.3, .5, .7) # 
+taus = c(.5,.7)#.5#c(.5, .7) # taus = c(.3, .5, .7) # 
 nsim = 100
 sigma2 = 2^2 # 1 # .7^2 # 
 ### Coefficients for model : y = XB + error
 
 
 outTotal <- NULL
-for(ycoef in c(-1)){
+for(ycoef in c(-2,-1,-.5)){
 
 	B = rep(1,4)#c( 2, 2, 2, 2 )
 	#if( error == "N" )
@@ -107,10 +107,13 @@ for(ycoef in c(-1)){
 
 			### Generate probabilities and dropout
 			XY.dropout <- lapply( Ys, function(xx) cbind(X.dropout, xx) )
+			Ysqr <- lapply(Ys, function(xx){ xx*xx} )
+			XY.missspec <- lapply( Ysqr, function(xx) cbind(X.dropout, xx))
 			PTrue <- lapply( 1:nsim, function(xx) matrix(1, n,1) )
 			R <- PTrue
 			for( j in 1:length(Bdrop) ){
-				odds <- lapply(XY.dropout, function(xx) exp(xx[,which(Bdrop[[j]]!=0)] %*% Bdrop[[j]][which(Bdrop[[j]]!=0)]))
+				## Miss-specified here
+				odds <- lapply(XY.missspec, function(xx) exp(xx[,which(Bdrop[[j]]!=0)] %*% Bdrop[[j]][which(Bdrop[[j]]!=0)]))
 				PTrue <- mapply(function(xx,yy) cbind(xx, yy/(1+yy)), PTrue, odds, SIMPLIFY=FALSE)
 				R <- mapply(function(xx,yy) cbind(xx, xx[,j]*rbinom(n,1,yy[,j+1])), R, PTrue, SIMPLIFY=FALSE)
 			}
@@ -142,6 +145,7 @@ for(ycoef in c(-1)){
 			rm(XY.temp)
 			rm(R.temp)
 			rm(Pest.old)
+			rm(XY.missspec)
 
 			drops <- sapply(R, function(xx) colMeans(xx[,-1]))
 			mins <- round(100*apply(drops, 1, min), 0)
@@ -203,7 +207,7 @@ for(ycoef in c(-1)){
 					rm(ghat)
 					rm(gmse)
 
-					bootN <- mapply(function(xx) boot.rq( XZbso, xx, tau=tau, R=1000,bsmethod="xy" )$B[,1:length(B)], Yo, SIMPLIFY=FALSE)
+					bootN <- mapply(function(xx) boot.rq( XZbso, xx, tau=tau, R=1000,bsmethod="wild" )$B[,1:length(B)], Yo, SIMPLIFY=FALSE)
 					CI <- lapply(bootN, function(xx) apply(xx, 2, quantile, probs=c(0.05, 0.95)) )
 					width <- sapply(CI, function(xx) apply(xx, 2, diff) )
 					coverage <- sapply(CI, function(xx) 1*(xx[1,]<=BTrue & BTrue<=xx[2,]) )
@@ -305,7 +309,7 @@ for(ycoef in c(-1)){
 
 		saveRDS( list(n=n, ms=ms, rhos=rhos, taus=taus, BTrue=BTrue, error=error, 
 						sigma2=sigma2, results=out, Dropout=Dropout), 
-						file=paste("goodAsymetricXYBig_n",n,"_2022.RDS", sep="") )
+						file=paste("NormalWild_n_",n,"_ycoef_",ycoef,"_2022.RDS", sep="") )
 
 		cat("Finished simulations for all n =", n, "\n\n")
 
